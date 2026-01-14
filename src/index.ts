@@ -59,9 +59,17 @@ async function handleChatRequest(
 ): Promise<Response> {
 	try {
 		// Parse JSON request body
-		const { messages = [] } = (await request.json()) as {
-			messages: ChatMessage[];
-		};
+		//const { messages = [] } = (await request.json()) as {
+		//	messages: ChatMessage[];
+		//};
+
+	    const messages = [
+        { role: "system", content: "You are a friendly assistant" },
+          {
+           role: "user",
+           content: ChatMessage[],
+          },
+        ];
 
 		// Add system prompt if not present
 		if (!messages.some((msg) => msg.role === "system")) {
