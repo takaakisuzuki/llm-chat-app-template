@@ -11,7 +11,6 @@ import { Env, ChatMessage } from "./types";
 
 // Model ID for Workers AI model
 // https://developers.cloudflare.com/workers-ai/models/
-//const MODEL_ID = "@cf/meta/llama-3.1-8b-instruct-fp8";
 const MODEL_ID = "@cf/google/gemma-3-12b-it";
 
 // Default system prompt
@@ -34,80 +33,28 @@ export default {
 			return env.ASSETS.fetch(request);
 		}
 
-		// API Routes
-		if (url.pathname === "/api/chat") {
-			// Handle POST requests for chat
-			if (request.method === "POST") {
-				return handleChatRequest(request, env);
-			}
-
-			// Method not allowed for other request types
-			return new Response("Method not allowed", { status: 405 });
+		// Handle chat API endpoint
+		if (url.pathname === "/api/chat" && request.method === "POST") {
+			return handleChatRequest(request, env);
 		}
 
-		// Handle 404 for unmatched routes
-		return new Response("Not found", { status: 404 });
+		return new Response("Not Found", { status: 404 });
 	},
 } satisfies ExportedHandler<Env>;
 
-/**
- * Handles chat API requests
- */
-async function handleChatRequest(
-	request: Request,
-	env: Env,
-): Promise<Response> {
-	try {
-		// Parse JSON request body
-		const { messages = [] } = (await request.json()) as {
-			messages: ChatMessage[];
-		};
+async function handleChatRequest(request: Request, env: Env): Promise<Response> {
+	const body = await request.json() as { messages: ChatMessage[] };
+	const messages = [
+		{ role: "system", content: SYSTEM_PROMPT },
+		...body.messages,
+	];
 
-	    const messages_g = [
-        { role: "system", content: "You are a friendly assistant" },
-          {
-           role: "user",
-           content: messages,
-          },
-        ];
+	const stream = await env.AI.run(MODEL_ID, {
+		messages,
+		stream: true,
+	});
 
-		// Add system prompt if not present
-		if (!messages.some((msg) => msg.role === "system")) {
-			messages.unshift({ role: "system", content: SYSTEM_PROMPT });
-		}
-
-		const stream = await env.AI.run(
-			MODEL_ID,
-			{
-				messages_g,
-				//max_tokens: 1024,
-				stream: true,
-			},
-			{
-				// Uncomment to use AI Gateway
-				// gateway: {
-				//   id: "YOUR_GATEWAY_ID", // Replace with your AI Gateway ID
-				//   skipCache: false,      // Set to true to bypass cache
-				//   cacheTtl: 3600,        // Cache time-to-live in seconds
-				// },
-			},
-		);
-
-		return new Response(stream, {
-			headers: {
-				"content-type": "text/event-stream; charset=utf-8",
-				"cache-control": "no-cache",
-				connection: "keep-alive",
-			},
-		});
-	} catch (error) {
-		console.error("Error processing chat request:", error);
-		return new Response(
-			JSON.stringify({ error: "Failed to process request" }),
-			{
-				status: 500,
-				headers: { "content-type": "application/json" },
-			},
-		);
-	}
+	return new Response(stream, {
+		headers: { "content-type": "text/event-stream" },
+	});
 }
