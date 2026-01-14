@@ -11,7 +11,8 @@ import { Env, ChatMessage } from "./types";
 
 // Model ID for Workers AI model
 // https://developers.cloudflare.com/workers-ai/models/
-const MODEL_ID = "@cf/meta/llama-3.1-8b-instruct-fp8";
+//const MODEL_ID = "@cf/meta/llama-3.1-8b-instruct-fp8";
+const MODEL_ID = "@cf/openai/gpt-oss-120b";
 
 // Default system prompt
 const SYSTEM_PROMPT =
@@ -70,9 +71,11 @@ async function handleChatRequest(
 		const stream = await env.AI.run(
 			MODEL_ID,
 			{
-				messages,
-				max_tokens: 1024,
-				stream: true,
+				//messages,
+				//max_tokens: 1024,
+				//stream: true,
+				instructions: 'You are a concise assistant.',
+                input: messages,
 			},
 			{
 				// Uncomment to use AI Gateway
